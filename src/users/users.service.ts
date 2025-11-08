@@ -12,7 +12,7 @@ export class UsersService {
 
     constructor() {
         const client = new DynamoDBClient({
-            region: process.env.AWS_REGION,,
+            region: process.env.AWS_REGION,
             endpoint: process.env.DYNAMODB_ENDPOINT || undefined, // use for local DynamoDB, optional
         });
         this.docClient = DynamoDBDocumentClient.from(client);
