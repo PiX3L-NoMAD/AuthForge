@@ -27,7 +27,7 @@ export class UsersService {
             email,
             passwordHash,
             createdAt: new Date().toISOString(),
-            // refreshTokenHash: null, // add this field when implementing refresh tokens
+            refreshTokenHash: null, // add this field when implementing refresh tokens
         };
         await this.docClient.send(new PutCommand({ TableName: this.table, Item: item }));
         return { id, username, email, createdAt: item.createdAt  };
