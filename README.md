@@ -181,9 +181,116 @@ All endpoints tested successfully in **Insomnia**:
 
 ---
 
+## Step 3 — `/auth/me` endpoint
+
+**What it does**  
+Returns the logged-in user’s profile from DynamoDB using the JWT in the `Authorization: Bearer <token>` header.
+
+**Why it exists**  
+Clients need a quick way to fetch “Who am I” after login without storing user data on the front end.
+
+### Routes
+
+- `GET /auth/me`  
+  Requires a valid **access token**.
+
+**Success 200**
+```json
+{
+  "id": "uuid",
+  "username": "janilee",
+  "email": "you@example.com",
+  "createdAt": "2025-11-07T18:22:31.000Z"
+}
+````
+
+**Unauthorized 401**
+
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized"
+}
+```
+
+### Quick start
+
+1. Log in to get an access token:
+
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"password123"}'
+```
+
+2. Call `/auth/me` with the access token:
+
+```bash
+curl http://localhost:3000/auth/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+### Testing in Insomnia
+
+* Create request: `GET http://localhost:3000/auth/me`
+* Auth tab → Bearer → paste access token
+* Try again after token expiry to confirm 401
+
+### Security notes
+
+* Protected by `JwtAuthGuard`
+* Never returns `passwordHash` or `refreshTokenHash`
+* Source of truth is DynamoDB, not the token body
+
+### Data model
+
+* Table name: `process.env.DYNAMODB_TABLE_USERS`
+* Primary key used here: `pk = user#<id>`
+* GSI for login flows: `email-index` on `email`
+
+### Environment
+
+```
+JWT_ACCESS_SECRET=...
+ACCESS_TOKEN_EXPIRES_IN=90s
+JWT_REFRESH_SECRET=...
+REFRESH_TOKEN_EXPIRES_IN=7d
+AWS_REGION=...
+DYNAMODB_TABLE_USERS=AuthForgeUsers
+```
+
+### Code map
+
+* Guard: `src/auth/jwt-auth.guard.ts`
+* Strategy attaches `request.user`: `src/auth/jwt.strategy.ts`
+* Decorator: `src/auth/decorators/current-user.decorator.ts`
+* Controller route: `src/auth/auth.controller.ts`
+* DB calls: `src/users/users.service.ts`
+
+### Troubleshooting
+
+* 401 with a fresh token
+  Check `JWT_ACCESS_SECRET` in both `JwtModule` and `JwtStrategy`.
+* 200 but missing fields
+  Verify the item written at `pk=user#<id>`.
+* Still stuck
+  Compare `JwtStrategy.validate()` return keys with your `JwtPayload` type.
+
+### Changelog
+
+* `feat(auth): add protected GET /auth/me`
+* `chore(auth): define JwtPayload type`
+* `test(auth): add Insomnia request for /auth/me`
+
+### References
+
+* Nest Guards: [https://docs.nestjs.com/guards](https://docs.nestjs.com/guards)
+* Nest JWT: [https://docs.nestjs.com/security/authentication#jwt-functionality](https://docs.nestjs.com/security/authentication#jwt-functionality)
+* AWS lib-dynamodb: [https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_lib_dynamodb.html](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_lib_dynamodb.html)
+
+
 ### Next Steps
 
-* Step 3: Add `/auth/me` route to retrieve current user info
 * Step 4: Connect to DynamoDB for extended identity management
 
 ---

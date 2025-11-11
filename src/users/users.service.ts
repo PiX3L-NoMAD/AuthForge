@@ -2,7 +2,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -52,17 +52,17 @@ export class UsersService {
         }));
         return res.Item ?? null;
     }
-
+    
     async setRefreshTokenHash(id: string, refreshTokenHash: string) {
-        await this.docClient.send(new PutCommand({
-            TableName: this.table,
-            Item: {
-                pk: `user#${id}`,
-                id,
-                refreshTokenHash,
-                updatedAt: new Date().toISOString(),
-            },
-        }))
+    await this.docClient.send(new UpdateCommand({
+        TableName: this.table,
+        Key: { pk: `user#${id}` },
+        UpdateExpression: 'SET refreshTokenHash = :r, updatedAt = :u',
+        ExpressionAttributeValues: {
+        ':r': refreshTokenHash,
+        ':u': new Date().toISOString(),
+        },
+    }));
     }
 
     // For MVP, if you prefer to update only one attribute use UpdateCommand. This is simplified.

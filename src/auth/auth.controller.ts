@@ -1,20 +1,25 @@
-// Purpose: Exposes API endpoints for registration, login, and token refresh.
-// References: https://docs.nestjs.com/controllers, https://docs.nestjs.com/security/authentication
-import { Controller, Post, Body, UnauthorizedException, Logger, Get, Req } from '@nestjs/common';
+/** Purpose: Exposes API endpoints for registration, login, token refresh, and "who am I" profile.
+References: https://docs.nestjs.com/controllers, https://docs.nestjs.com/security/authentication
+*/
+import { Controller, Post, Body, UnauthorizedException, Logger, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { Request } from 'express';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { UsersService } from 'src/users/users.service';
+import type { JwtPayload } from './types/jwt-payload.type';
 
 @Controller('auth')
 export class AuthController {
-private readonly logger = new Logger(AuthController.name);
-  constructor(private authService: AuthService) {}
+  private readonly logger = new Logger(AuthController.name);
+  
+  // inject UsersService so we can fetch the full user
+  constructor(private authService: AuthService, private usersService: UsersService) { }
 
   // POST /auth/register
   @Post('register')
   async register(@Body() body: { username: string; email: string; password: string }) {
-      this.logger.debug(`Login attempt for: ${body.email}`);
+    this.logger.debug(`Login attempt for: ${body.email}`);
     const user = await this.authService.register(body.username, body.email, body.password);
     return {
       message: 'User registered successfully',
@@ -45,13 +50,32 @@ private readonly logger = new Logger(AuthController.name);
     };
   }
   
+  //GET /auth/me
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getMe(@CurrentUser() payload: JwtPayload) {
+    // JwtStrategy.validate() returns { userId, username, email }
+    const user = await this.usersService.findById(payload.userId);
+    
+    // safety: if table returns no user (null), though this should not happen
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    };
+    // return a trimmed user profile (never leak passwordHash, refreshTokenHash, etc)
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      createdAt: user.createdAt,
+    };
+  }
+
   // GET /auth/hello
-    @UseGuards(JwtAuthGuard
-    )
-    @Get('hello')
+  @UseGuards(JwtAuthGuard)
+  @Get('hello')
   getHello(@Req() req: Request) {
-      return {
-          message: `Hello from AuthController. You have accessed a protected route. Yay!`,
-      };
-    }
+    return {
+      message: `Hello from AuthController. You have accessed a protected route. Yay!`,
+    };
+  }
 }
