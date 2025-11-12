@@ -1,5 +1,7 @@
-/** Purpose: Exposes API endpoints for registration, login, token refresh, and "who am I" profile.
-References: https://docs.nestjs.com/controllers, https://docs.nestjs.com/security/authentication
+/** 
+File: auth.controller.ts
+Purpose: Expose auth endpoints with clear responses including expiry metadata, for registration, login, token refresh, and "who am I" profile.
+Docs: https://docs.nestjs.com/controllers, https://docs.nestjs.com/security/authentication
 */
 import { Controller, Post, Body, UnauthorizedException, Logger, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -33,6 +35,7 @@ export class AuthController {
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
+    // tokens includes { accessToken, refreshToken, meta: { access, refresh } }
     const tokens = await this.authService.login(user);
     return {
       message: 'Login successful',
@@ -43,6 +46,7 @@ export class AuthController {
   // POST /auth/refresh
   @Post('refresh')
   async refresh(@Body() body: { refreshToken: string }) {
+    // result includes { accessToken, meta: { access } }
     const result = await this.authService.refreshTokens(body.refreshToken);
     return {
       message: 'Access token refreshed',
