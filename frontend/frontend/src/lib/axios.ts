@@ -8,7 +8,7 @@ import axios, { AxiosError, AxiosInstance } from 'axios';
 import { error } from 'console';
 import { access } from 'fs';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 let accessToken = '';
 let refreshToken = '';
